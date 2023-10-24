@@ -1,19 +1,18 @@
 AWSTemplateFormatVersion: 2010-09-09
-
 Description: |
   Create a website using an EC2 instance and security group
   
 Parameters:
-  
-  pIamgeId:
-    Description: Lates Linux AMI ID
-    Type: AWS::EC2::Image::Id
+
+  pImageId:
+    Description: Latest Linux AMI ID
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
 
   pKeyPair:
     Description: Key pair name
     Type: AWS::EC2::KeyPair::KeyName
-
+  
 Resources:
 
   rSecurityGroup:
@@ -31,17 +30,37 @@ Resources:
         FromPort: 22
         ToPort: 22
 
-  rWebserver:
-     Type: AWS::EC2::Instance
-     Properties:
-      ImageId: 
-      - !Ref pIamgeId
+  rWebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref pImageId
       InstanceType: t2.micro
-      KeyName: keypair_ec2
+      KeyName: !Ref pKeyPair
       SecurityGroupIds: 
       - !GetAtt rSecurityGroup.GroupId
       Tags: 
-      - key: Name
+      - Key: Name
         Value: nancy-web-server
-      UserData: "String"
-# Outputs:
+      UserData:
+        Fn::Base64: 
+          |
+            #!/bin/bash -x
+
+            # update the system and install apache
+            yum update -y
+            yum install httpd -y
+
+            # change to the correct directory and download web content
+            cd /var/www/html
+            FOLDER="https://raw.githubusercontent.com/MFnancy/my-repository/main/101-kittens-carousel-static-website-ec2/static-web"
+            wget ${FOLDER}/index.html
+            wget ${FOLDER}/cat0.jpg
+            wget ${FOLDER}/cat1.jpg
+            wget ${FOLDER}/cat2.jpg
+
+            # start and enable httpd
+            systemctl start httpd
+            systemctl enable httpd
+     
+    
+        # Outputs:
