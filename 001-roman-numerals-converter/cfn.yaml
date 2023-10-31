@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Deploys Roman Numeral Converter Flask Application
+  
+Parameters:
+
+  pImageId:
+    Description: Latest Linux AMI ID
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+
+  pKeyPair:
+    Description: Key pair name
+    Type: AWS::EC2::KeyPair::KeyName
+  
+Resources:
+
+  rSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow SSH and HTTP 
+      GroupName: enable-ssh-and-http
+      SecurityGroupIngress: 
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+
+  rWebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref pImageId
+      InstanceType: t2.micro
+      KeyName: !Ref pKeyPair
+      SecurityGroupIds: 
+      - !GetAtt rSecurityGroup.GroupId
+      Tags: 
+      - Key: Name
+        Value: nancy-roman-server
+      UserData:
+        Fn::Base64: 
+
+          #!/bin/bash -x
+
+          yum update -y
+          yum install python3 -y
+          yum pip install flask
+          pip3 install flask
+
+          FOLDER="https://raw.githubusercontent.com/MFnancy/my-repository/main/001-roman-numerals-converter"
+
+          cd /home/ec2-user
+          wget ${FOLDER}/app.py
+          mkdir templates
+          cd templates
+          wget ${FOLDER}/templates/index.html
+          wget ${FOLDER}/templates/result.html
+          cd ..
+
+          python3 app.py
+
+    
+Outputs:
+  WebsiteURL:
+    Description: URL for the website
+    Value: !Join [ "", ["http://", !GetAtt rWebServer.PublicDnsName]]
+    
