@@ -43,7 +43,7 @@ Resources:
         Value: nancy-roman-server
       UserData:
         Fn::Base64: 
-
+        |
           #!/bin/bash -x
 
           yum update -y
